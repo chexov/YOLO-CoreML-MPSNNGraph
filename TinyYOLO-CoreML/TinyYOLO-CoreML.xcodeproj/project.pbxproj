@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		42995F4D19282C272E62DEE0 /* Pods_TinyYOLO_CoreML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B8E789438F392230E3F20812 /* Pods_TinyYOLO_CoreML.framework */; };
+		5BF037A5209F872D00BA62D7 /* uaplates.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 5BF037A4209F872D00BA62D7 /* uaplates.mlmodel */; };
 		7B9F8D4A1EF2CDA700F913BD /* Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9F8D491EF2CDA700F913BD /* Helpers.swift */; };
 		7BA1C6D01EF27DA000BB25EF /* VideoCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC25FB51EF27C0D002ECBBA /* VideoCapture.swift */; };
 		7BA1C6D21EF2827800BB25EF /* UIImage+CVPixelBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BA1C6D11EF2827500BB25EF /* UIImage+CVPixelBuffer.swift */; };
@@ -25,6 +26,7 @@
 /* Begin PBXFileReference section */
 		0151EAF597804B0750381C73 /* Pods-TinyYOLO-CoreML.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TinyYOLO-CoreML.debug.xcconfig"; path = "Pods/Target Support Files/Pods-TinyYOLO-CoreML/Pods-TinyYOLO-CoreML.debug.xcconfig"; sourceTree = "<group>"; };
 		59A44166CF287BE516FB5D20 /* Pods-TinyYOLO-CoreML.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TinyYOLO-CoreML.release.xcconfig"; path = "Pods/Target Support Files/Pods-TinyYOLO-CoreML/Pods-TinyYOLO-CoreML.release.xcconfig"; sourceTree = "<group>"; };
+		5BF037A4209F872D00BA62D7 /* uaplates.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = uaplates.mlmodel; sourceTree = "<group>"; };
 		7B9F8D491EF2CDA700F913BD /* Helpers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Helpers.swift; path = ../../Common/Helpers.swift; sourceTree = "<group>"; };
 		7BA1C6D11EF2827500BB25EF /* UIImage+CVPixelBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+CVPixelBuffer.swift"; sourceTree = "<group>"; };
 		7BA1C6D51EF2861400BB25EF /* BoundingBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BoundingBox.swift; path = ../../Common/BoundingBox.swift; sourceTree = "<group>"; };
@@ -93,6 +95,7 @@
 				7BC25FAD1EF1B7D1002ECBBA /* Info.plist */,
 				7BC25FA51EF1B7D1002ECBBA /* Main.storyboard */,
 				7BC25FB31EF1CEAE002ECBBA /* TinyYOLO.mlmodel */,
+				5BF037A4209F872D00BA62D7 /* uaplates.mlmodel */,
 				7BA1C6D11EF2827500BB25EF /* UIImage+CVPixelBuffer.swift */,
 				7BC25FB51EF27C0D002ECBBA /* VideoCapture.swift */,
 				7BC25FA31EF1B7D1002ECBBA /* ViewController.swift */,
@@ -226,6 +229,7 @@
 				7BA1C6D01EF27DA000BB25EF /* VideoCapture.swift in Sources */,
 				7BA1C6DA1EF2B30200BB25EF /* CVPixelBuffer+Helpers.swift in Sources */,
 				7BC25FB41EF1CEB0002ECBBA /* TinyYOLO.mlmodel in Sources */,
+				5BF037A5209F872D00BA62D7 /* uaplates.mlmodel in Sources */,
 				7BA1C6D21EF2827800BB25EF /* UIImage+CVPixelBuffer.swift in Sources */,
 				7B9F8D4A1EF2CDA700F913BD /* Helpers.swift in Sources */,
 				7BA1C6D61EF2861600BB25EF /* BoundingBox.swift in Sources */,
