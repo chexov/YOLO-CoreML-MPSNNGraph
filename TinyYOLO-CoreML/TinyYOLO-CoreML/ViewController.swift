@@ -3,6 +3,7 @@ import Vision
 import AVFoundation
 import CoreMedia
 import VideoToolbox
+import SwiftOCR
 
 class ViewController: UIViewController {
     @IBOutlet weak var videoPreview: UIView!
@@ -10,6 +11,7 @@ class ViewController: UIViewController {
     @IBOutlet weak var debugImageView: UIImageView!
 
     let yolo = YOLO()
+    let swiftOCRInstance = SwiftOCR()
 
     var videoCapture: VideoCapture!
     var request: VNCoreMLRequest!
@@ -60,6 +62,7 @@ class ViewController: UIViewController {
                 }
             }
         }
+        colors[0] = UIColor.orange;
     }
 
     func setUpCoreImage() {
@@ -89,7 +92,7 @@ class ViewController: UIViewController {
         videoCapture = VideoCapture()
         videoCapture.delegate = self
         videoCapture.fps = 50
-        videoCapture.setUp(sessionPreset: AVCaptureSession.Preset.vga640x480) { success in
+        videoCapture.setUp(sessionPreset: AVCaptureSession.Preset.high) { success in
             if success {
                 // Add the video preview into the UI.
                 if let previewLayer = self.videoCapture.previewLayer {
@@ -135,27 +138,22 @@ class ViewController: UIViewController {
         // Measure how long it takes to predict a single video frame.
         let startTime = CACurrentMediaTime()
 
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer)
-        // Resize the input with Core Image to 416x416.
-//        guard let resizedPixelBuffer = resizedPixelBuffer else {
-//            return
-//        }
-//        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-//        let sx = CGFloat(YOLO.inputWidth) / CGFloat(CVPixelBufferGetWidth(pixelBuffer))
-//        let sy = CGFloat(YOLO.inputHeight) / CGFloat(CVPixelBufferGetHeight(pixelBuffer))
-//        let scaleTransform = CGAffineTransform(scaleX: sx, y: sy)
-//        let scaledImage = ciImage.transformed(by: scaleTransform)
-//        ciContext.render(ciImage, to: resizedPixelBuffer)
 
-        // This is an alternative way to resize the image (using vImage):
-        //if let resizedPixelBuffer = resizePixelBuffer(pixelBuffer,
-        //                                              width: YOLO.inputWidth,
-        //                                              height: YOLO.inputHeight)
+        let ciImage = CIImage.init(cvPixelBuffer: pixelBuffer)
+//        let ocrImg = OCRImage.init(ciImage: ciImage)
+//        let imgForOcr = self.swiftOCRInstance.preprocessImageForOCR(ocrImg)
+
+//        let cgImage: CGImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent)!
+//        let uiImage = UIImage.init(cgImage: cgImage)
+//        let gray = convertToGrayscale(image: uiImage)
+//        let handler = VNImageRequestHandler(cgImage: gray.cgImage!)
+
+        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer)
 
         let request: VNDetectTextRectanglesRequest =
                 VNDetectTextRectanglesRequest(completionHandler: { (request, error) in
                     if (error != nil) {
-                        print("Got Error In Run Text Dectect Request :(")
+                        print("Got Error In Run Text Detect Request :(")
                     } else {
                         guard let results = request.results as? Array<VNTextObservation> else {
                             fatalError("Unexpected result type from VNDetectTextRectanglesRequest")
@@ -165,21 +163,29 @@ class ViewController: UIViewController {
                             return
                         }
 
-                        print("results " + String(results.count))
+//                        print("results " + String(results.count))
                         var predictions = [YOLO.Prediction]()
                         for textObservation in results {
-                            let rect = getRect(textObservation: textObservation, imgWidth: CVPixelBufferGetWidth(pixelBuffer), imgHeight: CVPixelBufferGetHeight(pixelBuffer))
-                            print(rect)
+//                            let cropped: CIImage = ciImage.cropped(to: textObservation.boundingBox)
+//                            let ocrImage = OCRImage.init(ciImage: cropped)
+////                            let gray = convertToGrayscale(image: cropped)
+//                            let ocrImage2 = self.swiftOCRInstance.preprocessImageForOCR(ocrImage)
+////
+//                            self.swiftOCRInstance.recognizeInRect(ocrImage2,
+//                                    rect: textObservation.boundingBox,
+//                                    completionHandler: { recognizedString in
+//                                        print(recognizedString)
+//                                    })
 
-                            let prediction = YOLO.Prediction(classIndex: 1,
+                            let prediction = YOLO.Prediction(classIndex: 0,
                                     score: 1.0,
-                                    rect: rect)
+                                    rect: textObservation.boundingBox,
+                                    ocr: "")
                             predictions.append(prediction)
-                            print(prediction)
                         }
 
-                        self.showOnMainThread(predictions, 4.2)
-
+                        let elapsed = CACurrentMediaTime() - startTime
+                        self.showOnMainThread(predictions, elapsed)
                     }
                 })
         request.reportCharacterBoxes = true
@@ -240,10 +246,10 @@ class ViewController: UIViewController {
 
     func showOnMainThread(_ boundingBoxes: [YOLO.Prediction], _ elapsed: CFTimeInterval) {
         DispatchQueue.main.async {
-            // For debugging, to make sure the resized CVPixelBuffer is correct.
-            //var debugImage: CGImage?
-            //VTCreateCGImageFromCVPixelBuffer(resizedPixelBuffer, nil, &debugImage)
-            //self.debugImageView.image = UIImage(cgImage: debugImage!)
+//             For debugging, to make sure the resized CVPixelBuffer is correct.
+//            var debugImage: CGImage?
+//            VTCreateCGImageFromCVPixelBuffer(self.resizedPixelBuffer!, nil, &debugImage)
+//            self.debugImageView.image = UIImage(cgImage: debugImage!)
 
             self.show(predictions: boundingBoxes)
 
@@ -271,29 +277,18 @@ class ViewController: UIViewController {
             if i < predictions.count {
                 let prediction = predictions[i]
 
-                // The predicted bounding box is in the coordinate space of the input
-                // image, which is a square image of 416x416 pixels. We want to show it
-                // on the video preview, which is as wide as the screen and has a 4:3
-                // aspect ratio. The video preview also may be letterboxed at the top
-                // and bottom.
-                let width = view.bounds.width
-                let height = width * 4 / 3
-                let scaleX = width / CGFloat(YOLO.inputWidth)
-                let scaleY = height / CGFloat(YOLO.inputHeight)
-                let top = (view.bounds.height - height) / 2
+                var pred = prediction.rect
+                pred.size.width = view.bounds.width * pred.size.width
+                pred.size.height = view.bounds.height * pred.size.height
+                pred.origin.x = view.bounds.width * pred.origin.x
+                pred.origin.y = view.bounds.height * pred.origin.y
+                pred.origin.y = view.bounds.height - pred.origin.y - pred.height
 
-                // Translate and scale the rectangle to our own coordinate system.
-                var rect = prediction.rect
-                rect.origin.x *= scaleX
-                rect.origin.y *= scaleY
-                rect.origin.y += top
-                rect.size.width *= scaleX
-                rect.size.height *= scaleY
+//                print(String(format: "x: %1.f y: %1.f, w:%1.f, h:%1.f", pred.origin.x, pred.origin.y, pred.size.width, pred.size.height))
 
-                // Show the bounding box.
-                let label = String(format: "%@ %.1f", labels[prediction.classIndex], prediction.score * 100)
+                let label = String(format: "%@ %1.f", prediction.ocr, prediction.score * 100)
                 let color = colors[prediction.classIndex]
-                boundingBoxes[i].show(frame: rect, label: label, color: color)
+                boundingBoxes[i].show(frame: pred, label: label, color: color)
             } else {
                 boundingBoxes[i].hide()
             }
@@ -301,7 +296,8 @@ class ViewController: UIViewController {
     }
 }
 
-func getRect(textObservation: VNTextObservation, imgWidth: Int, imgHeight: Int) -> CGRect {
+
+func getRectAbs(textObservation: VNTextObservation, imgWidth: Int, imgHeight: Int) -> CGRect {
     let x = textObservation.boundingBox.origin.x * CGFloat(imgWidth)
     let y = textObservation.boundingBox.origin.y * CGFloat(imgHeight)
     let width = textObservation.boundingBox.size.width * CGFloat(imgWidth)
@@ -313,16 +309,39 @@ func getRect(textObservation: VNTextObservation, imgWidth: Int, imgHeight: Int) 
     rect.size.width = width
     rect.size.height = height
 
-    let s = rect.minX.description + " " + rect.minY.description + " " + rect.maxX.description + " " + rect.maxY.description
+//    let s = rect.minX.description + " " + rect.minY.description + " " + rect.maxX.description + " " + rect.maxY.description
+//    print(s)
+    return rect
+}
+
+func getRectRelative(textObservation: VNTextObservation) -> CGRect {
+    let x = textObservation.boundingBox.origin.x
+    let y = textObservation.boundingBox.origin.y
+    let width = textObservation.boundingBox.size.width
+    let height = textObservation.boundingBox.size.height
+
+    var rect = CGRect()
+    rect.origin.x = x
+    rect.origin.y = y
+    rect.size.width = width
+    rect.size.height = height
+
+//    let s = rect.minX.description + " " + rect.minY.description + " " + rect.maxX.description + " " + rect.maxY.description
 //    print(s)
     return rect
 }
 
 extension ViewController: VideoCaptureDelegate {
     func videoCapture(_ capture: VideoCapture, didCaptureVideoFrame pixelBuffer: CVPixelBuffer?, timestamp: CMTime) {
-        // For debugging.
 
-        //predict(image: UIImage(named: "dog416")!); return
+        // For debugging.
+//        let image = UIImage(named: "dog416")!
+//        if let pixelBuffer = image.pixelBuffer(width: 1140, height: 2106) {
+//            predictOCR(pixelBuffer: pixelBuffer);
+//            let ciImage = CIImage.init(cvImageBuffer: pixelBuffer)
+//            self.ciContext.render(ciImage, to: self.resizedPixelBuffer!)
+//            return
+//        }
 
         semaphore.wait()
 
@@ -331,16 +350,13 @@ extension ViewController: VideoCaptureDelegate {
             // instead of on the VideoCapture queue. We use the semaphore to block
             // the capture queue and drop frames when Core ML can't keep up.
             DispatchQueue.global().async {
-                self.predict(pixelBuffer: pixelBuffer)
+//                self.predict(pixelBuffer: pixelBuffer)
 //                self.predictUsingVision(pixelBuffer: pixelBuffer)
 
-//                let convertedImage = image;
-                // |> adjustColors |> convertToGrayscale
                 self.predictOCR(pixelBuffer: pixelBuffer)
 //
 //                let ciImage = CIImage.init(cvImageBuffer: pixelBuffer)
-//                self.ciContext.render(ciImage, to: resizedPixelBuffer)
-
+//                self.ciContext.render(ciImage, to: self.resizedPixelBuffer!)
 
 
             }

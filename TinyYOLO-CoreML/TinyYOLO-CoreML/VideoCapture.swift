@@ -9,15 +9,15 @@ public protocol VideoCaptureDelegate: class {
 public class VideoCapture: NSObject {
   public var previewLayer: AVCaptureVideoPreviewLayer?
   public weak var delegate: VideoCaptureDelegate?
-  public var fps = 15
+  public var fps = 30
 
   let captureSession = AVCaptureSession()
   let videoOutput = AVCaptureVideoDataOutput()
-  let queue = DispatchQueue(label: "net.machinethink.camera-queue")
+  let queue = DispatchQueue(label: "videoQ")
 
   var lastTimestamp = CMTime()
 
-  public func setUp(sessionPreset: AVCaptureSession.Preset = .photo,
+  public func setUp(sessionPreset: AVCaptureSession.Preset,
                     completion: @escaping (Bool) -> Void) {
     queue.async {
       let success = self.setUpCamera(sessionPreset: sessionPreset)

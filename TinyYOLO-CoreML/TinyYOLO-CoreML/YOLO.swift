@@ -15,6 +15,7 @@ class YOLO {
     let classIndex: Int
     let score: Float
     let rect: CGRect
+    let ocr: String
   }
 
   let model = TinyYOLO()
@@ -133,7 +134,7 @@ class YOLO {
 
             let prediction = Prediction(classIndex: detectedClass,
                                         score: confidenceInClass,
-                                        rect: rect)
+                                        rect: rect, ocr: "")
             predictions.append(prediction)
           }
         }
