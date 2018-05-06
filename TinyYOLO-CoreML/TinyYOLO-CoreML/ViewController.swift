@@ -22,10 +22,15 @@ class ViewController: UIViewController {
 
     let ciContext = CIContext()
     var resizedPixelBuffer: CVPixelBuffer?
+    var uaplatesPixelBuffer: CVPixelBuffer?
 
     var framesDone = 0
     var frameCapturingStartTime = CACurrentMediaTime()
     let semaphore = DispatchSemaphore(value: 2)
+    
+    let uaplatesWidth = 200
+    let uaplatesHeight = 84
+    let uaplatesmodel = uaplates()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -140,11 +145,13 @@ class ViewController: UIViewController {
 
 
         let ciImage = CIImage.init(cvPixelBuffer: pixelBuffer)
+        let context = CIContext()
+        
 //        let ocrImg = OCRImage.init(ciImage: ciImage)
 //        let imgForOcr = self.swiftOCRInstance.preprocessImageForOCR(ocrImg)
 
-//        let cgImage: CGImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent)!
-//        let uiImage = UIImage.init(cgImage: cgImage)
+        let cgImage: CGImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent)!
+        let uiImage = UIImage.init(cgImage: cgImage)
 //        let gray = convertToGrayscale(image: uiImage)
 //        let handler = VNImageRequestHandler(cgImage: gray.cgImage!)
 
@@ -177,11 +184,32 @@ class ViewController: UIViewController {
 //                                        print(recognizedString)
 //                                    })
 
-                            let prediction = YOLO.Prediction(classIndex: 0,
-                                    score: 1.0,
-                                    rect: textObservation.boundingBox,
-                                    ocr: "")
-                            predictions.append(prediction)
+
+                            let textrect = self.expandBoundingBox(textObservation: textObservation, imgWidth: CVPixelBufferGetWidth(pixelBuffer), imgHeight: CVPixelBufferGetHeight(pixelBuffer))
+                            
+                            print(String(textrect.minX.native) + " " + String(textrect.minY.native) + " " + String(textrect.width.native) + " " + String(textrect.height.native))
+                            
+                            let cropped: CIImage = ciImage.cropped(to: textrect)
+                            let croppedPixelbuffer = uiImage.pixelBuffer(width: Int(textrect.width), height: Int(textrect.height))
+                            context.render(cropped, to: croppedPixelbuffer!)
+
+                            // Resize the input with Core Image to 200x84.
+                            let resizedPixelBuffer = resizePixelBuffer(croppedPixelbuffer!,
+                                                                          width: self.uaplatesWidth,
+                                                                          height: self.uaplatesHeight)
+                            
+                            if let modelOutput = try? self.uaplatesmodel.prediction(image: resizedPixelBuffer!) {
+                                var label = "X3"
+                                if (modelOutput.output1[0].doubleValue > 0.5) {
+                                    label = "plate"
+                                }
+                                print("isPlate = " + label)
+                                let prediction = YOLO.Prediction(classIndex: 0,
+                                                                 score: Float(modelOutput.output1[0].doubleValue),
+                                                                 rect: textObservation.boundingBox,
+                                                                 ocr: label)
+                                predictions.append(prediction)
+                            }
                         }
 
                         let elapsed = CACurrentMediaTime() - startTime
@@ -194,6 +222,30 @@ class ViewController: UIViewController {
         } catch {
             print(error)
         }
+    }
+    
+    func expandBoundingBox(textObservation: VNTextObservation, imgWidth: Int, imgHeight: Int) -> CGRect {
+        let x = textObservation.boundingBox.origin.x * CGFloat(imgWidth)
+        let y = textObservation.boundingBox.origin.y * CGFloat(imgHeight)
+        let width = textObservation.boundingBox.size.width * CGFloat(imgWidth)
+        let height = textObservation.boundingBox.size.height * CGFloat(imgHeight)
+        
+        var rect = CGRect()
+        rect.origin.x = x
+        rect.origin.y = y
+        rect.size.width = width
+        rect.size.height = height
+        
+        
+        if (rect.minX - 25 < 0 || rect.minY - 25 < 0) {
+            return rect
+        }
+        
+        let expandedRect = CGRect(x: rect.minX - 25,
+                          y: rect.minY - 25,
+                          width: rect.width + 50,
+                          height: rect.height + 50)
+        return expandedRect
     }
 
     func predict(pixelBuffer: CVPixelBuffer) {
