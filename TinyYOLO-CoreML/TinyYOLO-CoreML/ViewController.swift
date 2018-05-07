@@ -28,8 +28,8 @@ class ViewController: UIViewController {
     var frameCapturingStartTime = CACurrentMediaTime()
     let semaphore = DispatchSemaphore(value: 2)
     
-    let uaplatesWidth = 200
-    let uaplatesHeight = 84
+    let uaplatesWidth = 128
+    let uaplatesHeight = 54
     let uaplatesmodel = uaplates()
 
     override func viewDidLoad() {
@@ -150,8 +150,8 @@ class ViewController: UIViewController {
 //        let ocrImg = OCRImage.init(ciImage: ciImage)
 //        let imgForOcr = self.swiftOCRInstance.preprocessImageForOCR(ocrImg)
 
-        let cgImage: CGImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent)!
-        let uiImage = UIImage.init(cgImage: cgImage)
+//        let cgImage: CGImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent)!
+//        let uiImage = UIImage.init(cgImage: cgImage)
 //        let gray = convertToGrayscale(image: uiImage)
 //        let handler = VNImageRequestHandler(cgImage: gray.cgImage!)
 
@@ -186,10 +186,11 @@ class ViewController: UIViewController {
 
 
                             let textrect = self.expandBoundingBox(textObservation: textObservation, imgWidth: CVPixelBufferGetWidth(pixelBuffer), imgHeight: CVPixelBufferGetHeight(pixelBuffer))
-                            
-                            print(String(textrect.minX.native) + " " + String(textrect.minY.native) + " " + String(textrect.width.native) + " " + String(textrect.height.native))
+//                            print(String(textrect.minX.native) + " " + String(textrect.minY.native) + " " + String(textrect.width.native) + " " + String(textrect.height.native))
                             
                             let cropped: CIImage = ciImage.cropped(to: textrect)
+                            let cgImage: CGImage = self.ciContext.createCGImage(cropped, from: cropped.extent)!
+                            let uiImage = UIImage.init(cgImage: cgImage)
                             let croppedPixelbuffer = uiImage.pixelBuffer(width: Int(textrect.width), height: Int(textrect.height))
                             context.render(cropped, to: croppedPixelbuffer!)
 
@@ -198,17 +199,21 @@ class ViewController: UIViewController {
                                                                           width: self.uaplatesWidth,
                                                                           height: self.uaplatesHeight)
                             
+                            DispatchQueue.main.async {
+                                let debugCIImage = CIImage(cvPixelBuffer: resizedPixelBuffer!)
+                                self.debugImageView.image = UIImage(ciImage: debugCIImage)
+                            }
+                            
                             if let modelOutput = try? self.uaplatesmodel.prediction(image: resizedPixelBuffer!) {
-                                var label = "X3"
+                                var label = "plate"
                                 if (modelOutput.output1[0].doubleValue > 0.5) {
-                                    label = "plate"
+                                    let prediction = YOLO.Prediction(classIndex: 0,
+                                                                     score: Float(modelOutput.output1[0].doubleValue),
+                                                                     rect: textObservation.boundingBox,
+                                                                     ocr: label)
+                                    predictions.append(prediction)
                                 }
-                                print("isPlate = " + label)
-                                let prediction = YOLO.Prediction(classIndex: 0,
-                                                                 score: Float(modelOutput.output1[0].doubleValue),
-                                                                 rect: textObservation.boundingBox,
-                                                                 ocr: label)
-                                predictions.append(prediction)
+
                             }
                         }
 
@@ -236,6 +241,7 @@ class ViewController: UIViewController {
         rect.size.width = width
         rect.size.height = height
         
+//        return rect
         
         if (rect.minX - 25 < 0 || rect.minY - 25 < 0) {
             return rect
