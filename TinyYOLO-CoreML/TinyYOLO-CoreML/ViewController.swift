@@ -197,8 +197,12 @@ class ViewController: UIViewController {
                                     let croppedCi: CIImage = ciImageFrame.cropped(to: textRect)
                                     let cgImage: CGImage = self.ciContext.createCGImage(croppedCi, from: croppedCi.extent)!
 
+                                    self.swiftOCRInstance.confidenceThreshold = 0.1
                                     let ocrImage = self.swiftOCRInstance.preprocessImageForOCR(OCRImage.init(cgImage: cgImage))
-
+                                    DispatchQueue.main.async {
+                                        let debugCIImage = CIImage(cvPixelBuffer: resizedPixelBuffer!)
+                                        self.debugImageView.image = UIImage(cgImage: ocrImage.cgImage!)
+                                    }
                                     self.swiftOCRInstance.recognize(ocrImage,
                                             { recognizedString in
                                                 print("OCR:" + recognizedString)
@@ -208,11 +212,6 @@ class ViewController: UIViewController {
                                                         rect: textObservation.boundingBox,
                                                         ocr: recognizedString)
                                                 predictions.append(prediction)
-
-                                                DispatchQueue.main.async {
-                                                    let debugCIImage = CIImage(cvPixelBuffer: resizedPixelBuffer!)
-                                                    self.debugImageView.image = UIImage(cgImage: ocrImage.cgImage!)
-                                                }
 
                                                 taskGroup.leave()
                                             })
