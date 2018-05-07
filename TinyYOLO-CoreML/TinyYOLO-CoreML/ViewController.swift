@@ -11,7 +11,9 @@ class ViewController: UIViewController {
     @IBOutlet weak var debugImageView: UIImageView!
 
     let yolo = YOLO()
-    let swiftOCRInstance = SwiftOCR()
+//    let swiftOCRInstance = SwiftOCR.init(recognizableCharacters: "0123456789", network: FFNN.fromFile(Bundle(for: SwiftOCR.self).url(forResource: "OCR-Network", withExtension: nil)!)!)
+    let swiftOCRInstance = SwiftOCR.init()
+
 
     var videoCapture: VideoCapture!
     var request: VNCoreMLRequest!
@@ -27,7 +29,7 @@ class ViewController: UIViewController {
     var framesDone = 0
     var frameCapturingStartTime = CACurrentMediaTime()
     let semaphore = DispatchSemaphore(value: 2)
-    
+
     let uaplatesWidth = 128
     let uaplatesHeight = 54
     let uaplatesmodel = uaplates()
@@ -144,14 +146,14 @@ class ViewController: UIViewController {
         let startTime = CACurrentMediaTime()
 
 
-        let ciImage = CIImage.init(cvPixelBuffer: pixelBuffer)
-        let context = CIContext()
-        
+        let ciImageFrame = CIImage.init(cvPixelBuffer: pixelBuffer)
+        let ocrImageFrame = OCRImage.init(ciImage: ciImageFrame)
+        let cgImageFrame: CGImage = self.ciContext.createCGImage(ciImageFrame, from: ciImageFrame.extent)!
+        let uiImageFrame = UIImage.init(cgImage: cgImageFrame)
+
 //        let ocrImg = OCRImage.init(ciImage: ciImage)
 //        let imgForOcr = self.swiftOCRInstance.preprocessImageForOCR(ocrImg)
 
-//        let cgImage: CGImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent)!
-//        let uiImage = UIImage.init(cgImage: cgImage)
 //        let gray = convertToGrayscale(image: uiImage)
 //        let handler = VNImageRequestHandler(cgImage: gray.cgImage!)
 
@@ -170,65 +172,61 @@ class ViewController: UIViewController {
                             return
                         }
 
-//                        print("results " + String(results.count))
                         var predictions = [YOLO.Prediction]()
+                        let taskGroup = DispatchGroup()
                         for textObservation in results {
-//                            let cropped: CIImage = ciImage.cropped(to: textObservation.boundingBox)
-//                            let ocrImage = OCRImage.init(ciImage: cropped)
-////                            let gray = convertToGrayscale(image: cropped)
-//                            let ocrImage2 = self.swiftOCRInstance.preprocessImageForOCR(ocrImage)
-////
-//                            self.swiftOCRInstance.recognizeInRect(ocrImage2,
-//                                    rect: textObservation.boundingBox,
-//                                    completionHandler: { recognizedString in
-//                                        print(recognizedString)
-//                                    })
+                            let width = CVPixelBufferGetWidth(pixelBuffer)
+                            let height = CVPixelBufferGetHeight(pixelBuffer)
+                            let textRect = self.expandBoundingBox(textObservation: textObservation, imgWidth: width, imgHeight: height)
 
+                            let croppedText: CIImage = ciImageFrame.cropped(to: textRect)
+                            let cgImageText: CGImage = self.ciContext.createCGImage(croppedText, from: croppedText.extent)!
+                            let uiImageText = UIImage.init(cgImage: cgImageText)
 
-                            let textrect = self.expandBoundingBox(textObservation: textObservation, imgWidth: CVPixelBufferGetWidth(pixelBuffer), imgHeight: CVPixelBufferGetHeight(pixelBuffer))
-//                            print(String(textrect.minX.native) + " " + String(textrect.minY.native) + " " + String(textrect.width.native) + " " + String(textrect.height.native))
-                            
-                            let cropped: CIImage = ciImage.cropped(to: textrect)
-                            let cgImage: CGImage = self.ciContext.createCGImage(cropped, from: cropped.extent)!
-                            let uiImage = UIImage.init(cgImage: cgImage)
-                            let croppedPixelbuffer = uiImage.pixelBuffer(width: Int(textrect.width), height: Int(textrect.height))
-                            context.render(cropped, to: croppedPixelbuffer!)
+//                            let ocrImage = OCRImage.init(cgImage: cgImageText)
 
-                            // Resize the input with Core Image to 200x84.
-                            let resizedPixelBuffer = resizePixelBuffer(croppedPixelbuffer!,
-                                                                          width: self.uaplatesWidth,
-                                                                          height: self.uaplatesHeight)
-                            
-                            DispatchQueue.main.async {
-                                let debugCIImage = CIImage(cvPixelBuffer: resizedPixelBuffer!)
-                                self.debugImageView.image = UIImage(ciImage: debugCIImage)
-                            }
-                            
+                            let pixelBufferText = uiImageText.pixelBuffer(width: Int(textRect.width), height: Int(textRect.height))
+                            let resizedPixelBuffer = resizePixelBuffer(pixelBufferText!,
+                                    width: self.uaplatesWidth,
+                                    height: self.uaplatesHeight)
+
+                            taskGroup.enter()
                             if let modelOutput = try? self.uaplatesmodel.prediction(image: resizedPixelBuffer!) {
-                                if (modelOutput.output1[0].doubleValue > 0.5) {
-                                    
-//                                    let ocrCIImage = CIImage(cvPixelBuffer: resizedPixelBuffer!)
-//                                    let ocrCGImage: CGImage = self.ciContext.createCGImage(ocrCIImage, from: ocrCIImage.extent)!
-//
-//                                    let ocrImage = OCRImage.init(cgImage: ocrCGImage)
-//                                    self.swiftOCRInstance.recognizeInRect(ocrImage,
-//                                                                        rect: textrect,
-//                                                                        completionHandler: { recognizedString in
-                                                                            let prediction = YOLO.Prediction(classIndex: 0,
-                                                                                                             score: Float(modelOutput.output1[0].doubleValue),
-                                                                                                             rect: textObservation.boundingBox,
-                                                                                                             ocr: "plate")
-                                                                            predictions.append(prediction)
-//                                                                        })
-                                    
+                                let plateScore = modelOutput.output1[0].floatValue
+                                if (plateScore > 0.5) {
+                                    let croppedCi: CIImage = ciImageFrame.cropped(to: textRect)
+                                    let cgImage: CGImage = self.ciContext.createCGImage(croppedCi, from: croppedCi.extent)!
 
+                                    let ocrImage = self.swiftOCRInstance.preprocessImageForOCR(OCRImage.init(cgImage: cgImage))
+
+                                    self.swiftOCRInstance.recognize(ocrImage,
+                                            { recognizedString in
+                                                print("OCR:" + recognizedString)
+
+                                                let prediction = YOLO.Prediction(classIndex: 0,
+                                                        score: plateScore,
+                                                        rect: textObservation.boundingBox,
+                                                        ocr: recognizedString)
+                                                predictions.append(prediction)
+
+                                                DispatchQueue.main.async {
+                                                    let debugCIImage = CIImage(cvPixelBuffer: resizedPixelBuffer!)
+                                                    self.debugImageView.image = UIImage(cgImage: ocrImage.cgImage!)
+                                                }
+
+                                                taskGroup.leave()
+                                            })
+                                } else {
+                                    taskGroup.leave()
                                 }
-
                             }
-                        }
 
-                        let elapsed = CACurrentMediaTime() - startTime
-                        self.showOnMainThread(predictions, elapsed)
+                        }
+                        taskGroup.notify(queue: DispatchQueue.main, work: DispatchWorkItem(block: {
+                            // All tasks are done.
+                            let elapsed = CACurrentMediaTime() - startTime
+                            self.showOnMainThread(predictions, elapsed)
+                        }))
                     }
                 })
         request.reportCharacterBoxes = true
@@ -238,30 +236,35 @@ class ViewController: UIViewController {
             print(error)
         }
     }
-    
+
     func expandBoundingBox(textObservation: VNTextObservation, imgWidth: Int, imgHeight: Int) -> CGRect {
+        var rect = toAbsoluteRect(textObservation: textObservation, imgWidth: imgWidth, imgHeight: imgHeight)
+
+//        return rect
+
+        if (rect.minX - 25 < 0 || rect.minY - 25 < 0) {
+            return rect
+        }
+
+        let expandedRect = CGRect(x: rect.minX - 25,
+                y: rect.minY - 25,
+                width: rect.width + 50,
+                height: rect.height + 50)
+        return expandedRect
+    }
+
+    private func toAbsoluteRect(textObservation: VNTextObservation, imgWidth: Int, imgHeight: Int) -> CGRect {
         let x = textObservation.boundingBox.origin.x * CGFloat(imgWidth)
         let y = textObservation.boundingBox.origin.y * CGFloat(imgHeight)
         let width = textObservation.boundingBox.size.width * CGFloat(imgWidth)
         let height = textObservation.boundingBox.size.height * CGFloat(imgHeight)
-        
+
         var rect = CGRect()
         rect.origin.x = x
         rect.origin.y = y
         rect.size.width = width
         rect.size.height = height
-        
-//        return rect
-        
-        if (rect.minX - 25 < 0 || rect.minY - 25 < 0) {
-            return rect
-        }
-        
-        let expandedRect = CGRect(x: rect.minX - 25,
-                          y: rect.minY - 25,
-                          width: rect.width + 50,
-                          height: rect.height + 50)
-        return expandedRect
+        return rect
     }
 
     func predict(pixelBuffer: CVPixelBuffer) {
@@ -315,9 +318,9 @@ class ViewController: UIViewController {
     func showOnMainThread(_ boundingBoxes: [YOLO.Prediction], _ elapsed: CFTimeInterval) {
         DispatchQueue.main.async {
 //             For debugging, to make sure the resized CVPixelBuffer is correct.
-//            var debugImage: CGImage?
-//            VTCreateCGImageFromCVPixelBuffer(self.resizedPixelBuffer!, nil, &debugImage)
-//            self.debugImageView.image = UIImage(cgImage: debugImage!)
+            var debugImage: CGImage?
+            VTCreateCGImageFromCVPixelBuffer(self.resizedPixelBuffer!, nil, &debugImage)
+            self.debugImageView.image = UIImage(cgImage: debugImage!)
 
             self.show(predictions: boundingBoxes)
 

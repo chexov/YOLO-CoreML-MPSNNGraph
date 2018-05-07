@@ -21,6 +21,7 @@
 		7BC25FA71EF1B7D1002ECBBA /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7BC25FA51EF1B7D1002ECBBA /* Main.storyboard */; };
 		7BC25FA91EF1B7D1002ECBBA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7BC25FA81EF1B7D1002ECBBA /* Assets.xcassets */; };
 		7BC25FB41EF1CEB0002ECBBA /* TinyYOLO.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 7BC25FB31EF1CEAE002ECBBA /* TinyYOLO.mlmodel */; };
+		B3E29B94209FD513005DF453 /* plate.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = B3E29B93209FD513005DF453 /* plate.mlmodel */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 		7BC25FAD1EF1B7D1002ECBBA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7BC25FB31EF1CEAE002ECBBA /* TinyYOLO.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = TinyYOLO.mlmodel; sourceTree = "<group>"; };
 		7BC25FB51EF27C0D002ECBBA /* VideoCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCapture.swift; sourceTree = "<group>"; };
+		B3E29B93209FD513005DF453 /* plate.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; name = plate.mlmodel; path = ../../plate.mlmodel; sourceTree = "<group>"; };
 		B8E789438F392230E3F20812 /* Pods_TinyYOLO_CoreML.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_TinyYOLO_CoreML.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -86,6 +88,7 @@
 		7BC25FA01EF1B7D1002ECBBA /* TinyYOLO-CoreML */ = {
 			isa = PBXGroup;
 			children = (
+				B3E29B93209FD513005DF453 /* plate.mlmodel */,
 				7BC25FA11EF1B7D1002ECBBA /* AppDelegate.swift */,
 				7BC25FA81EF1B7D1002ECBBA /* Assets.xcassets */,
 				7BA1C6D51EF2861400BB25EF /* BoundingBox.swift */,
@@ -234,6 +237,7 @@
 				7B9F8D4A1EF2CDA700F913BD /* Helpers.swift in Sources */,
 				7BA1C6D61EF2861600BB25EF /* BoundingBox.swift in Sources */,
 				7BC25FA41EF1B7D1002ECBBA /* ViewController.swift in Sources */,
+				B3E29B94209FD513005DF453 /* plate.mlmodel in Sources */,
 				7BA1C6D81EF2871600BB25EF /* YOLO.swift in Sources */,
 				7BC25FA21EF1B7D1002ECBBA /* AppDelegate.swift in Sources */,
 			);
