@@ -205,13 +205,23 @@ class ViewController: UIViewController {
                             }
                             
                             if let modelOutput = try? self.uaplatesmodel.prediction(image: resizedPixelBuffer!) {
-                                var label = "plate"
                                 if (modelOutput.output1[0].doubleValue > 0.5) {
-                                    let prediction = YOLO.Prediction(classIndex: 0,
-                                                                     score: Float(modelOutput.output1[0].doubleValue),
-                                                                     rect: textObservation.boundingBox,
-                                                                     ocr: label)
-                                    predictions.append(prediction)
+                                    
+//                                    let ocrCIImage = CIImage(cvPixelBuffer: resizedPixelBuffer!)
+//                                    let ocrCGImage: CGImage = self.ciContext.createCGImage(ocrCIImage, from: ocrCIImage.extent)!
+//
+//                                    let ocrImage = OCRImage.init(cgImage: ocrCGImage)
+//                                    self.swiftOCRInstance.recognizeInRect(ocrImage,
+//                                                                        rect: textrect,
+//                                                                        completionHandler: { recognizedString in
+                                                                            let prediction = YOLO.Prediction(classIndex: 0,
+                                                                                                             score: Float(modelOutput.output1[0].doubleValue),
+                                                                                                             rect: textObservation.boundingBox,
+                                                                                                             ocr: "plate")
+                                                                            predictions.append(prediction)
+//                                                                        })
+                                    
+
                                 }
 
                             }
